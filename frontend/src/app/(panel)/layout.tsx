@@ -3,9 +3,9 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { ThemeProvider } from "@/lib/theme-context";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { SidebarProvider } from "@/lib/sidebar-context";
 
 export default function PanelLayout({
   children,
@@ -30,14 +30,16 @@ export default function PanelLayout({
   }
 
   return (
-    <ThemeProvider>
-      <div className="flex min-h-screen bg-background text-foreground">
+    <SidebarProvider>
+      <div className="flex min-h-screen bg-secondary/30">
         <Sidebar />
-        <div className="flex flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <Topbar />
-          <main className="flex-1 overflow-y-auto p-8">{children}</main>
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8">
+            {children}
+          </main>
         </div>
       </div>
-    </ThemeProvider>
+    </SidebarProvider>
   );
 }

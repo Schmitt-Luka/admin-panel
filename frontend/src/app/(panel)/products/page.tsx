@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, ImagePlus, X } from "lucide-react";
 import { useCrud } from "@/hooks/use-crud";
 import type { Category, Product } from "@/types";
 import { api, ApiError } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { fileToBase64 } from "@/lib/image-upload";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ interface ProductFormState {
   description: string;
   price: string;
   categoryId: string;
+  imageUrl: string;
 }
 
 const emptyForm: ProductFormState = {
@@ -37,6 +39,7 @@ const emptyForm: ProductFormState = {
   description: "",
   price: "",
   categoryId: "",
+  imageUrl: "",
 };
 
 export default function ProductsPage() {
@@ -65,6 +68,7 @@ export default function ProductsPage() {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Product | null>(null);
   const [form, setForm] = React.useState<ProductFormState>(emptyForm);
+  const [uploadingImage, setUploadingImage] = React.useState(false);
 
   const openCreate = () => {
     setEditing(null);
@@ -79,8 +83,26 @@ export default function ProductsPage() {
       description: product.description || "",
       price: String(product.price),
       categoryId: product.categoryId,
+      imageUrl: product.imageUrl || "",
     });
     setModalOpen(true);
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const base64 = await fileToBase64(file);
+      setForm((f) => ({ ...f, imageUrl: base64 }));
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "No se pudo cargar la imagen",
+      );
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -89,6 +111,7 @@ export default function ProductsPage() {
       description: form.description || undefined,
       price: Number(form.price),
       categoryId: form.categoryId,
+      imageUrl: form.imageUrl,
     };
     if (editing) {
       await update(editing.id, payload as unknown as Partial<Product>);
@@ -99,6 +122,22 @@ export default function ProductsPage() {
   };
 
   const columns: DataTableColumn<Product>[] = [
+    {
+      header: "",
+      className: "w-14",
+      cell: (row) =>
+        row.imageUrl ? (
+          <img
+            src={row.imageUrl}
+            alt={row.name}
+            className="h-10 w-10 rounded-md border object-cover"
+          />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-md border bg-secondary text-muted-foreground">
+            <ImagePlus className="h-4 w-4" />
+          </div>
+        ),
+    },
     {
       header: "Nombre",
       cell: (row) => <span className="font-medium">{row.name}</span>,
@@ -112,7 +151,7 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Productos</h1>
           <p className="text-sm text-muted-foreground">
@@ -182,7 +221,40 @@ export default function ProductsPage() {
             rows={3}
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Imagen del producto</Label>
+          {form.imageUrl ? (
+            <div className="flex items-center gap-3">
+              <img
+                src={form.imageUrl}
+                alt="Vista previa"
+                className="h-16 w-16 rounded-md border object-cover"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Quitar
+              </Button>
+            </div>
+          ) : (
+            <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed text-sm text-muted-foreground hover:bg-secondary/50">
+              <ImagePlus className="h-5 w-5" />
+              {uploadingImage ? "Cargando..." : "Subir imagen"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+                disabled={uploadingImage}
+              />
+            </label>
+          )}
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="price">Precio</Label>
             <Input

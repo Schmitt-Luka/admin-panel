@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import * as React from "react";
+import { Pencil, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -10,7 +11,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +21,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 export interface DataTableColumn<T> {
   header: string;
@@ -37,17 +38,13 @@ interface DataTableProps<T extends { id: string }> {
   emptyMessage?: string;
 }
 
-/**
- * Tabla genérica reutilizable: recibe columnas configurables y datos tipados.
- * Se usa igual en Categorías, Productos y Ventas, cambiando solo `columns`.
- */
 export function DataTable<T extends { id: string }>({
   columns,
   data,
   loading,
   onEdit,
   onDelete,
-  emptyMessage = 'No hay elementos para mostrar todavía.',
+  emptyMessage = "No hay elementos para mostrar todavía.",
 }: DataTableProps<T>) {
   const [rowToDelete, setRowToDelete] = React.useState<T | null>(null);
   const hasActions = Boolean(onEdit || onDelete);
@@ -63,21 +60,34 @@ export function DataTable<T extends { id: string }>({
                   {col.header}
                 </TableHead>
               ))}
-              {hasActions && <TableHead className="w-[100px] text-right">Acciones</TableHead>}
+              {hasActions && (
+                <TableHead className="w-[100px] text-right">Acciones</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading && (
-              <TableRow>
-                <TableCell colSpan={columns.length + (hasActions ? 1 : 0)} className="text-center text-muted-foreground py-8">
-                  Cargando...
-                </TableCell>
-              </TableRow>
-            )}
+            {loading &&
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={`skeleton-${i}`}>
+                  {columns.map((col) => (
+                    <TableCell key={col.header} className={col.className}>
+                      <Skeleton className="h-4 w-full max-w-[160px]" />
+                    </TableCell>
+                  ))}
+                  {hasActions && (
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-4 w-16" />
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
 
             {!loading && data.length === 0 && (
               <TableRow>
-                <TableCell colSpan={columns.length + (hasActions ? 1 : 0)} className="text-center text-muted-foreground py-8">
+                <TableCell
+                  colSpan={columns.length + (hasActions ? 1 : 0)}
+                  className="text-center text-muted-foreground py-8"
+                >
                   {emptyMessage}
                 </TableCell>
               </TableRow>
@@ -94,7 +104,12 @@ export function DataTable<T extends { id: string }>({
                   {hasActions && (
                     <TableCell className="text-right space-x-1">
                       {onEdit && (
-                        <Button variant="ghost" size="icon" onClick={() => onEdit(row)} aria-label="Editar">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onEdit(row)}
+                          aria-label="Editar"
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                       )}
@@ -116,12 +131,16 @@ export function DataTable<T extends { id: string }>({
         </Table>
       </div>
 
-      <AlertDialog open={!!rowToDelete} onOpenChange={(open) => !open && setRowToDelete(null)}>
+      <AlertDialog
+        open={!!rowToDelete}
+        onOpenChange={(open) => !open && setRowToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar este elemento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. El registro se eliminará de forma permanente.
+              Esta acción no se puede deshacer. El registro se eliminará de
+              forma permanente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
