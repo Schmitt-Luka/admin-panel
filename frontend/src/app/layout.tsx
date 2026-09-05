@@ -1,24 +1,23 @@
-import type { Metadata } from "next";
-import { Toaster } from "sonner";
-import { AuthProvider } from "@/lib/auth-context";
-import { ThemeProvider } from "@/lib/theme-context";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Toaster } from 'sonner';
+import { AuthProvider } from '@/lib/auth-context';
+import { ThemeProvider } from '@/lib/theme-context';
+import { BrandThemeProvider } from '@/lib/brand-theme-context';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "Admin Panel",
-  description: "Panel de administración genérico para ecommerce",
+  title: 'Admin Panel',
+  description: 'Panel de administración genérico para ecommerce',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <BrandThemeProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </BrandThemeProvider>
         </ThemeProvider>
         <Toaster richColors position="top-right" />
       </body>

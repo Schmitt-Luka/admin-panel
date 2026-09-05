@@ -1,30 +1,23 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { Plus, Search, ImagePlus, X } from "lucide-react";
-import { useCrud } from "@/hooks/use-crud";
-import type { Category, Product } from "@/types";
-import { api, ApiError } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
-import { fileToBase64 } from "@/lib/image-upload";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@/components/shared/data-table";
-import { FormModal } from "@/components/shared/form-modal";
+import * as React from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Plus, Search, ImagePlus, X } from 'lucide-react';
+import { useCrud } from '@/hooks/use-crud';
+import type { Category, Product } from '@/types';
+import { api, ApiError } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
+import { fileToBase64 } from '@/lib/image-upload';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DataTable, type DataTableColumn } from '@/components/shared/data-table';
+import { FormModal } from '@/components/shared/form-modal';
+import { PageTransition } from '@/components/shared/page-transition';
 
 interface ProductFormState {
   name: string;
@@ -34,34 +27,22 @@ interface ProductFormState {
   imageUrl: string;
 }
 
-const emptyForm: ProductFormState = {
-  name: "",
-  description: "",
-  price: "",
-  categoryId: "",
-  imageUrl: "",
-};
+const emptyForm: ProductFormState = { name: '', description: '', price: '', categoryId: '', imageUrl: '' };
 
 export default function ProductsPage() {
-  const { data, loading, submitting, create, update, remove } =
-    useCrud<Product>("/products");
+  const { data, loading, submitting, create, update, remove, removeMany } = useCrud<Product>('/products');
   const [categories, setCategories] = React.useState<Category[]>([]);
-  const [search, setSearch] = React.useState("");
+  const [search, setSearch] = React.useState('');
 
   React.useEffect(() => {
     api
-      .get<Category[]>("/categories")
+      .get<Category[]>('/categories')
       .then(setCategories)
-      .catch((err) =>
-        toast.error(
-          err instanceof ApiError ? err.message : "Error al cargar categorías",
-        ),
-      );
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Error al cargar categorías'));
   }, []);
 
   const filtered = React.useMemo(
-    () =>
-      data.filter((p) => p.name.toLowerCase().includes(search.toLowerCase())),
+    () => data.filter((p) => p.name.toLowerCase().includes(search.toLowerCase())),
     [data, search],
   );
 
@@ -76,30 +57,38 @@ export default function ProductsPage() {
     setModalOpen(true);
   };
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  React.useEffect(() => {
+    if (searchParams.get('new') === '1' && categories.length > 0) {
+      openCreate();
+      router.replace('/products');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, categories.length]);
+
   const openEdit = (product: Product) => {
     setEditing(product);
     setForm({
       name: product.name,
-      description: product.description || "",
+      description: product.description || '',
       price: String(product.price),
       categoryId: product.categoryId,
-      imageUrl: product.imageUrl || "",
+      imageUrl: product.imageUrl || '',
     });
     setModalOpen(true);
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    e.target.value = "";
+    e.target.value = '';
     if (!file) return;
     setUploadingImage(true);
     try {
       const base64 = await fileToBase64(file);
       setForm((f) => ({ ...f, imageUrl: base64 }));
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "No se pudo cargar la imagen",
-      );
+      toast.error(err instanceof Error ? err.message : 'No se pudo cargar la imagen');
     } finally {
       setUploadingImage(false);
     }
@@ -123,15 +112,12 @@ export default function ProductsPage() {
 
   const columns: DataTableColumn<Product>[] = [
     {
-      header: "",
-      className: "w-14",
+      header: '',
+      className: 'w-14',
       cell: (row) =>
         row.imageUrl ? (
-          <img
-            src={row.imageUrl}
-            alt={row.name}
-            className="h-10 w-10 rounded-md border object-cover"
-          />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={row.imageUrl} alt={row.name} className="h-10 w-10 rounded-md border object-cover" />
         ) : (
           <div className="flex h-10 w-10 items-center justify-center rounded-md border bg-secondary text-muted-foreground">
             <ImagePlus className="h-4 w-4" />
@@ -139,24 +125,29 @@ export default function ProductsPage() {
         ),
     },
     {
-      header: "Nombre",
+      header: 'Nombre',
       cell: (row) => <span className="font-medium">{row.name}</span>,
+      sortValue: (row) => row.name.toLowerCase(),
     },
     {
-      header: "Categoría",
-      cell: (row) => <Badge variant="info">{row.category?.name || "—"}</Badge>,
+      header: 'Categoría',
+      cell: (row) => <Badge variant="info">{row.category?.name || '—'}</Badge>,
+      sortValue: (row) => row.category?.name?.toLowerCase() || '',
     },
-    { header: "Precio", cell: (row) => formatCurrency(row.price) },
+    {
+      header: 'Precio',
+      cell: (row) => formatCurrency(row.price),
+      sortValue: (row) => Number(row.price),
+    },
   ];
 
   return (
+    <PageTransition>
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Productos</h1>
-          <p className="text-sm text-muted-foreground">
-            Gestioná el catálogo de productos.
-          </p>
+          <p className="text-sm text-muted-foreground">Gestioná el catálogo de productos.</p>
         </div>
         <Button onClick={openCreate} disabled={categories.length === 0}>
           <Plus className="mr-2 h-4 w-4" />
@@ -186,17 +177,16 @@ export default function ProductsPage() {
         loading={loading}
         onEdit={openEdit}
         onDelete={(row) => remove(row.id)}
+        onBulkDelete={(rows) => removeMany(rows.map((r) => r.id))}
         emptyMessage={
-          search
-            ? "No se encontraron productos con ese nombre."
-            : "Todavía no creaste ningún producto."
+          search ? 'No se encontraron productos con ese nombre.' : 'Todavía no creaste ningún producto.'
         }
       />
 
       <FormModal
         open={modalOpen}
         onOpenChange={setModalOpen}
-        title={editing ? "Editar producto" : "Nuevo producto"}
+        title={editing ? 'Editar producto' : 'Nuevo producto'}
         description="Completá los datos del producto."
         onSubmit={handleSubmit}
         submitting={submitting}
@@ -215,9 +205,7 @@ export default function ProductsPage() {
           <Textarea
             id="description"
             value={form.description}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, description: e.target.value }))
-            }
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
             rows={3}
           />
         </div>
@@ -225,6 +213,7 @@ export default function ProductsPage() {
           <Label>Imagen del producto</Label>
           {form.imageUrl ? (
             <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={form.imageUrl}
                 alt="Vista previa"
@@ -234,7 +223,7 @@ export default function ProductsPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))}
+                onClick={() => setForm((f) => ({ ...f, imageUrl: '' }))}
               >
                 <X className="mr-2 h-4 w-4" />
                 Quitar
@@ -243,7 +232,7 @@ export default function ProductsPage() {
           ) : (
             <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed text-sm text-muted-foreground hover:bg-secondary/50">
               <ImagePlus className="h-5 w-5" />
-              {uploadingImage ? "Cargando..." : "Subir imagen"}
+              {uploadingImage ? 'Cargando...' : 'Subir imagen'}
               <input
                 type="file"
                 accept="image/*"
@@ -263,9 +252,7 @@ export default function ProductsPage() {
               min="0"
               step="0.01"
               value={form.price}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, price: e.target.value }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
               required
             />
           </div>
@@ -273,9 +260,7 @@ export default function ProductsPage() {
             <Label>Categoría</Label>
             <Select
               value={form.categoryId}
-              onValueChange={(value) =>
-                setForm((f) => ({ ...f, categoryId: value }))
-              }
+              onValueChange={(value) => setForm((f) => ({ ...f, categoryId: value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Elegí una categoría" />
@@ -292,5 +277,6 @@ export default function ProductsPage() {
         </div>
       </FormModal>
     </div>
+    </PageTransition>
   );
 }

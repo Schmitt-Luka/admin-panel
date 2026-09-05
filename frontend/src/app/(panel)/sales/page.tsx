@@ -1,28 +1,22 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { Plus, Trash2, Search } from "lucide-react";
-import { toast } from "sonner";
-import { useCrud } from "@/hooks/use-crud";
-import type { Category, Product, Sale } from "@/types";
-import { api, ApiError } from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@/components/shared/data-table";
-import { FormModal } from "@/components/shared/form-modal";
+import * as React from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Plus, Trash2, Search, Eye } from 'lucide-react';
+import { toast } from 'sonner';
+import { useCrud } from '@/hooks/use-crud';
+import type { Category, Product, Sale } from '@/types';
+import { api, ApiError } from '@/lib/api';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { DataTable, type DataTableColumn } from '@/components/shared/data-table';
+import { FormModal } from '@/components/shared/form-modal';
+import { PageTransition } from '@/components/shared/page-transition';
+import { SaleDetailModal } from '@/components/shared/sale-detail-modal';
 
 interface DraftItem {
   productId: string;
@@ -30,49 +24,49 @@ interface DraftItem {
 }
 
 export default function SalesPage() {
-  const { data: sales, loading, submitting, create } = useCrud<Sale>("/sales");
+  const { data: sales, loading, submitting, create } = useCrud<Sale>('/sales');
   const [products, setProducts] = React.useState<Product[]>([]);
-  const [search, setSearch] = React.useState("");
+  const [search, setSearch] = React.useState('');
   const [modalOpen, setModalOpen] = React.useState(false);
-  const [items, setItems] = React.useState<DraftItem[]>([
-    { productId: "", quantity: 1 },
-  ]);
+  const [items, setItems] = React.useState<DraftItem[]>([{ productId: '', quantity: 1 }]);
+  const [selectedSale, setSelectedSale] = React.useState<Sale | null>(null);
 
   React.useEffect(() => {
     api
-      .get<Product[]>("/products")
+      .get<Product[]>('/products')
       .then(setProducts)
-      .catch((err) =>
-        toast.error(
-          err instanceof ApiError ? err.message : "Error al cargar productos",
-        ),
-      );
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Error al cargar productos'));
   }, []);
 
   const filtered = React.useMemo(
     () =>
       sales.filter((sale) =>
-        sale.items.some((i) =>
-          i.product.name.toLowerCase().includes(search.toLowerCase()),
-        ),
+        sale.items.some((i) => i.product.name.toLowerCase().includes(search.toLowerCase())),
       ),
     [sales, search],
   );
 
   const openCreate = () => {
-    setItems([{ productId: "", quantity: 1 }]);
+    setItems([{ productId: '', quantity: 1 }]);
     setModalOpen(true);
   };
 
-  const addItemRow = () =>
-    setItems((prev) => [...prev, { productId: "", quantity: 1 }]);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  React.useEffect(() => {
+    if (searchParams.get('new') === '1' && products.length > 0) {
+      openCreate();
+      router.replace('/sales');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, products.length]);
+
+  const addItemRow = () => setItems((prev) => [...prev, { productId: '', quantity: 1 }]);
   const removeItemRow = (index: number) =>
     setItems((prev) => prev.filter((_, i) => i !== index));
 
   const updateItem = (index: number, patch: Partial<DraftItem>) =>
-    setItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, ...patch } : item)),
-    );
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
 
   const total = items.reduce((acc, item) => {
     const product = products.find((p) => p.id === item.productId);
@@ -82,7 +76,7 @@ export default function SalesPage() {
   const handleSubmit = async () => {
     const validItems = items.filter((i) => i.productId && i.quantity > 0);
     if (validItems.length === 0) {
-      toast.error("Agregá al menos un producto a la venta");
+      toast.error('Agregá al menos un producto a la venta');
       return;
     }
     await create({ items: validItems } as unknown as Partial<Sale>);
@@ -91,30 +85,37 @@ export default function SalesPage() {
 
   const columns: DataTableColumn<Sale>[] = [
     {
-      header: "Productos",
+      header: 'Productos',
       cell: (row) => (
         <span className="text-sm">
-          {row.items.map((i) => `${i.product.name} x${i.quantity}`).join(", ")}
+          {row.items.map((i) => `${i.product.name} x${i.quantity}`).join(', ')}
         </span>
       ),
     },
     {
-      header: "Total",
-      cell: (row) => (
-        <Badge variant="success">{formatCurrency(row.total)}</Badge>
-      ),
+      header: 'Total',
+      cell: (row) => <Badge variant="success">{formatCurrency(row.total)}</Badge>,
+      sortValue: (row) => Number(row.total),
     },
-    { header: "Fecha", cell: (row) => formatDate(row.createdAt) },
+    {
+      header: 'Fecha',
+      cell: (row) => formatDate(row.createdAt),
+      sortValue: (row) => new Date(row.createdAt).getTime(),
+    },
+    {
+      header: '',
+      className: 'w-10 text-right',
+      cell: () => <Eye className="ml-auto h-4 w-4 text-muted-foreground" />,
+    },
   ];
 
   return (
+    <PageTransition>
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Ventas</h1>
-          <p className="text-sm text-muted-foreground">
-            Listado de ventas registradas en el sistema.
-          </p>
+          <p className="text-sm text-muted-foreground">Listado de ventas registradas en el sistema.</p>
         </div>
         <Button onClick={openCreate} disabled={products.length === 0}>
           <Plus className="mr-2 h-4 w-4" />
@@ -142,12 +143,13 @@ export default function SalesPage() {
         columns={columns}
         data={filtered}
         loading={loading}
+        onRowClick={(row) => setSelectedSale(row)}
         emptyMessage={
-          search
-            ? "No se encontraron ventas con ese producto."
-            : "Todavía no se generó ninguna venta."
+          search ? 'No se encontraron ventas con ese producto.' : 'Todavía no se generó ninguna venta.'
         }
       />
+
+      <SaleDetailModal sale={selectedSale} onOpenChange={(open) => !open && setSelectedSale(null)} />
 
       <FormModal
         open={modalOpen}
@@ -160,14 +162,12 @@ export default function SalesPage() {
       >
         <div className="space-y-3">
           {items.map((item, index) => (
-            <div key={index} className="flex items-end gap-2">
+            <div key={index} className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-2">
                 <Label>Producto</Label>
                 <Select
                   value={item.productId}
-                  onValueChange={(value) =>
-                    updateItem(index, { productId: value })
-                  }
+                  onValueChange={(value) => updateItem(index, { productId: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Elegí un producto" />
@@ -187,30 +187,18 @@ export default function SalesPage() {
                   type="number"
                   min={1}
                   value={item.quantity}
-                  onChange={(e) =>
-                    updateItem(index, { quantity: Number(e.target.value) })
-                  }
+                  onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
                 />
               </div>
               {items.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeItemRow(index)}
-                >
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeItemRow(index)}>
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               )}
             </div>
           ))}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addItemRow}
-          >
+          <Button type="button" variant="outline" size="sm" onClick={addItemRow}>
             <Plus className="mr-2 h-4 w-4" />
             Agregar producto
           </Button>
@@ -222,5 +210,6 @@ export default function SalesPage() {
         </div>
       </FormModal>
     </div>
+    </PageTransition>
   );
 }

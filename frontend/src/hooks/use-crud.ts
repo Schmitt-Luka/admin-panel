@@ -64,12 +64,23 @@ export function useCrud<T extends { id: string }>(endpoint: string) {
     try {
       await api.delete(`${endpoint}/${id}`);
       setData((prev) => prev.filter((item) => item.id !== id));
-      toast.success('Eliminado correctamente');
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Error al eliminar');
       throw err;
     }
   };
 
-  return { data, loading, submitting, create, update, remove, refetch: fetchAll };
+  const removeMany = async (ids: string[]) => {
+    try {
+      await Promise.all(ids.map((id) => api.delete(`${endpoint}/${id}`)));
+      setData((prev) => prev.filter((item) => !ids.includes(item.id)));
+      toast.success(`${ids.length} elemento${ids.length > 1 ? 's' : ''} eliminado${ids.length > 1 ? 's' : ''}`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Error al eliminar en lote');
+      await fetchAll();
+      throw err;
+    }
+  };
+
+  return { data, loading, submitting, create, update, remove, removeMany, refetch: fetchAll };
 }

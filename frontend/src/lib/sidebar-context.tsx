@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
 interface SidebarContextType {
   collapsed: boolean;
@@ -9,31 +9,27 @@ interface SidebarContextType {
   setMobileOpen: (open: boolean) => void;
 }
 
-const SidebarContext = React.createContext<SidebarContextType | undefined>(
-  undefined,
-);
+const SidebarContext = React.createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   React.useEffect(() => {
-    const stored = localStorage.getItem("sidebar_collapsed");
-    if (stored) setCollapsed(stored === "true");
+    const stored = localStorage.getItem('sidebar_collapsed');
+    if (stored) setCollapsed(stored === 'true');
   }, []);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
       const next = !prev;
-      localStorage.setItem("sidebar_collapsed", String(next));
+      localStorage.setItem('sidebar_collapsed', String(next));
       return next;
     });
   };
 
   return (
-    <SidebarContext.Provider
-      value={{ collapsed, toggleCollapsed, mobileOpen, setMobileOpen }}
-    >
+    <SidebarContext.Provider value={{ collapsed, toggleCollapsed, mobileOpen, setMobileOpen }}>
       {children}
     </SidebarContext.Provider>
   );
@@ -41,7 +37,6 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 
 export function useSidebar() {
   const ctx = React.useContext(SidebarContext);
-  if (!ctx)
-    throw new Error("useSidebar debe usarse dentro de un SidebarProvider");
+  if (!ctx) throw new Error('useSidebar debe usarse dentro de un SidebarProvider');
   return ctx;
 }
